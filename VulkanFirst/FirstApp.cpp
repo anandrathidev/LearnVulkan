@@ -17,6 +17,7 @@ namespace lve
 
 	FirstApp::FirstApp()
 	{
+		loadModels();
 		createPipelineLayout();
 		createPipeline();
 		createCommandBuffers();
@@ -35,7 +36,17 @@ namespace lve
 			_pipelineLayout, _lveSwapChain.getRenderPass(), 
 			WIDTH, HEIGHT);
 		PipeLineConfigInfo& pipelineConfig = _lvePipeLine->getdefaultPipeLineConfigInfo();
-}
+	}
+
+	void FirstApp::loadModels()
+	{
+		std::vector<LveModel::Vertex> vertices {
+			{{0.0f, -0.5f}},
+			{{0.5f,  0.5f}},
+			{{-0.0f, 0.5f}}
+		};
+		_lveModel = std::make_unique<LveModel>(_lveEngineDevice, vertices);
+	}
 
 	void FirstApp::createPipelineLayout()
 	{
@@ -82,7 +93,7 @@ namespace lve
 
 			//VkClearValue clearValues;
 			std::array<VkClearValue, 2> clearValues;
-			clearValues[0].color = { 1.0f, 0.1f, 0.1f, 1.0f };
+			clearValues[0].color = { 1.0f, 1.0f, 1.1f, 1.0f };
 			clearValues[1].depthStencil = { 1.0f, 0};
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
@@ -90,7 +101,9 @@ namespace lve
 			vkCmdBeginRenderPass(_commandBuffer[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			_lvePipeLine->bind(_commandBuffer[i]);
-			vkCmdDraw(_commandBuffer[i], 3, 1, 0 , 0);
+			//vkCmdDraw(_commandBuffer[i], 3, 1, 0 , 0);
+			_lveModel->bind(_commandBuffer[i]);
+			_lveModel->draw(_commandBuffer[i]);
 			vkCmdEndRenderPass(_commandBuffer[i]);
 			if (vkEndCommandBuffer(_commandBuffer[i]) != VK_SUCCESS)
 			{
