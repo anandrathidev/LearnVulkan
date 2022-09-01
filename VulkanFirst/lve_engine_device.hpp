@@ -35,7 +35,7 @@ class LveEngineDevice {
 
   // Not copyable or movable
   LveEngineDevice(const LveEngineDevice&) = delete;
-  void operator=(const LveEngineDevice&) = delete;
+  LveEngineDevice& operator=(const LveEngineDevice&) = delete;
   LveEngineDevice(LveEngineDevice&&) = delete;
   LveEngineDevice&operator=(LveEngineDevice&&) = delete;
 

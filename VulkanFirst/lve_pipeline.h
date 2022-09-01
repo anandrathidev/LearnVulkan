@@ -4,6 +4,10 @@
 
 namespace lve {
 	struct PipeLineConfigInfo {
+		PipeLineConfigInfo(const PipeLineConfigInfo&) = delete;
+		PipeLineConfigInfo& operator=(const PipeLineConfigInfo&) = delete;
+		PipeLineConfigInfo() = default;
+
 		VkViewport viewport;
 		VkRect2D scissor;
 		VkPipelineViewportStateCreateInfo viewportInfo;
@@ -13,10 +17,14 @@ namespace lve {
 		VkPipelineColorBlendAttachmentState colorBlendAttachment;
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo;
 		VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+		std::vector<VkDynamicState> dynamicStateEnables;
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+
 		VkPipelineLayout pipelineLayout = nullptr;
 		VkRenderPass renderPass = nullptr;
 		uint32_t subpass = 0;
 	};
+
 	class LveEngineDevice;
 	class LvePipeLine
 	{
@@ -30,7 +38,7 @@ namespace lve {
 			);
 		~LvePipeLine();
 		LvePipeLine(const LvePipeLine&) = delete;
-		void operator =(const LvePipeLine&) = delete;
+		LvePipeLine& operator =(const LvePipeLine&) = delete;
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shadermodule);
 
 		PipeLineConfigInfo& createdefaultPipeLineConfigInfo(uint32_t width, uint32_t height, VkPipelineLayout pipelineLayout, VkRenderPass renderPass);

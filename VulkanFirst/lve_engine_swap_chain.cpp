@@ -12,57 +12,69 @@
 namespace lve {
 
 LveSwapChain::LveSwapChain(LveEngineDevice& deviceRef, VkExtent2D extent)
-    : device{deviceRef}, windowExtent{extent} {
-  createSwapChain();
-  createImageViews();
-  createRenderPass();
-  createDepthResources();
-  createFramebuffers();
-  createSyncObjects();
+    : _device{deviceRef}, windowExtent{extent} {
+    init();
 }
+
+LveSwapChain::LveSwapChain(
+    LveEngineDevice& deviceRef, VkExtent2D extent, std::shared_ptr<LveSwapChain> previous)
+    : _device{ deviceRef }, windowExtent{ extent }, _oldSwapChain{ previous } {
+    init();
+    _oldSwapChain = nullptr;
+}
+
+void LveSwapChain::init() {
+    createSwapChain();
+    createImageViews();
+    createRenderPass();
+    createDepthResources();
+    createFramebuffers();
+    createSyncObjects();
+}
+
 
 LveSwapChain::~LveSwapChain() {
   for (auto imageView : swapChainImageViews) {
-    vkDestroyImageView(device.device(), imageView, nullptr);
+    vkDestroyImageView(_device.device(), imageView, nullptr);
   }
   swapChainImageViews.clear();
 
   if (swapChain != nullptr) {
-    vkDestroySwapchainKHR(device.device(), swapChain, nullptr);
+    vkDestroySwapchainKHR(_device.device(), swapChain, nullptr);
     swapChain = nullptr;
   }
 
   for (int i = 0; i < depthImages.size(); i++) {
-    vkDestroyImageView(device.device(), depthImageViews[i], nullptr);
-    vkDestroyImage(device.device(), depthImages[i], nullptr);
-    vkFreeMemory(device.device(), depthImageMemorys[i], nullptr);
+    vkDestroyImageView(_device.device(), depthImageViews[i], nullptr);
+    vkDestroyImage(_device.device(), depthImages[i], nullptr);
+    vkFreeMemory(_device.device(), depthImageMemorys[i], nullptr);
   }
 
   for (auto framebuffer : swapChainFramebuffers) {
-    vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+    vkDestroyFramebuffer(_device.device(), framebuffer, nullptr);
   }
 
-  vkDestroyRenderPass(device.device(), _renderPass, nullptr);
+  vkDestroyRenderPass(_device.device(), _renderPass, nullptr);
 
   // cleanup synchronization objects
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(device.device(), renderFinishedSemaphores[i], nullptr);
-    vkDestroySemaphore(device.device(), imageAvailableSemaphores[i], nullptr);
-    vkDestroyFence(device.device(), inFlightFences[i], nullptr);
+    vkDestroySemaphore(_device.device(), renderFinishedSemaphores[i], nullptr);
+    vkDestroySemaphore(_device.device(), imageAvailableSemaphores[i], nullptr);
+    vkDestroyFence(_device.device(), inFlightFences[i], nullptr);
   }
 }
 
 VkResult LveSwapChain::acquireNextImage(uint32_t *imageIndex) 
 {
   vkWaitForFences(
-      device.device(),
+      _device.device(),
       1,
       &inFlightFences[currentFrame],
       VK_TRUE,
       std::numeric_limits<uint64_t>::max());
 
   VkResult result = vkAcquireNextImageKHR(
-      device.device(),
+      _device.device(),
       swapChain,
       std::numeric_limits<uint64_t>::max(),
       imageAvailableSemaphores[currentFrame],  // must be a not signaled semaphore
@@ -76,7 +88,7 @@ VkResult LveSwapChain::submitCommandBuffers(
     const VkCommandBuffer *buffers, uint32_t *imageIndex) 
 {
   if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
-    vkWaitForFences(device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(_device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
   }
   imagesInFlight[*imageIndex] = inFlightFences[currentFrame];
 
@@ -96,8 +108,8 @@ VkResult LveSwapChain::submitCommandBuffers(
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
 
-  vkResetFences(device.device(), 1, &inFlightFences[currentFrame]);
-  if (vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) !=
+  vkResetFences(_device.device(), 1, &inFlightFences[currentFrame]);
+  if (vkQueueSubmit(_device.graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) !=
       VK_SUCCESS) {
     throw std::runtime_error("failed to submit draw command buffer!");
   }
@@ -114,7 +126,7 @@ VkResult LveSwapChain::submitCommandBuffers(
 
   presentInfo.pImageIndices = imageIndex;
 
-  auto result = vkQueuePresentKHR(device.presentQueue(), &presentInfo);
+  auto result = vkQueuePresentKHR(_device.presentQueue(), &presentInfo);
 
   currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
@@ -123,7 +135,7 @@ VkResult LveSwapChain::submitCommandBuffers(
 
 void LveSwapChain::createSwapChain() 
 {
-  SwapChainSupportDetails swapChainSupport = device.getSwapChainSupport();
+  SwapChainSupportDetails swapChainSupport = _device.getSwapChainSupport();
 
   VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -137,7 +149,7 @@ void LveSwapChain::createSwapChain()
 
   VkSwapchainCreateInfoKHR createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  createInfo.surface = device.surface();
+  createInfo.surface = _device.surface();
 
   createInfo.minImageCount = imageCount;
   createInfo.imageFormat = surfaceFormat.format;
@@ -146,7 +158,7 @@ void LveSwapChain::createSwapChain()
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  QueueFamilyIndices indices = device.findPhysicalQueueFamilies();
+  QueueFamilyIndices indices = _device.findPhysicalQueueFamilies();
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily};
 
   if (indices.graphicsFamily != indices.presentFamily) {
@@ -165,9 +177,10 @@ void LveSwapChain::createSwapChain()
   createInfo.presentMode = presentMode;
   createInfo.clipped = VK_TRUE;
 
-  createInfo.oldSwapchain = VK_NULL_HANDLE;
+  //createInfo.oldSwapchain = VK_NULL_HANDLE;
+  createInfo.oldSwapchain = _oldSwapChain == nullptr ? VK_NULL_HANDLE : _oldSwapChain->swapChain;
 
-  if (vkCreateSwapchainKHR(device.device(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+  if (vkCreateSwapchainKHR(_device.device(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
     throw std::runtime_error("failed to create swap chain!");
   }
 
@@ -175,9 +188,9 @@ void LveSwapChain::createSwapChain()
   // allowed to create a swap chain with more. That's why we'll first query the final number of
   // images with vkGetSwapchainImagesKHR, then resize the container and finally call it again to
   // retrieve the handles.
-  vkGetSwapchainImagesKHR(device.device(), swapChain, &imageCount, nullptr);
+  vkGetSwapchainImagesKHR(_device.device(), swapChain, &imageCount, nullptr);
   swapChainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(device.device(), swapChain, &imageCount, swapChainImages.data());
+  vkGetSwapchainImagesKHR(_device.device(), swapChain, &imageCount, swapChainImages.data());
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent = extent;
@@ -198,7 +211,7 @@ void LveSwapChain::createImageViews()
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device.device(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
+    if (vkCreateImageView(_device.device(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
         VK_SUCCESS) {
       throw std::runtime_error("failed to create texture image view!");
     }
@@ -262,7 +275,7 @@ void LveSwapChain::createRenderPass()
   renderPassInfo.dependencyCount = 1;
   renderPassInfo.pDependencies = &dependency;
 
-  if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS) {
+  if (vkCreateRenderPass(_device.device(), &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS) {
     throw std::runtime_error("failed to create render pass!");
   }
 }
@@ -284,7 +297,7 @@ void LveSwapChain::createFramebuffers() {
     framebufferInfo.layers = 1;
 
     if (vkCreateFramebuffer(
-            device.device(),
+            _device.device(),
             &framebufferInfo,
             nullptr,
             &swapChainFramebuffers[i]) != VK_SUCCESS) {
@@ -318,7 +331,7 @@ void LveSwapChain::createDepthResources() {
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.flags = 0;
 
-    device.createImageWithInfo(
+    _device.createImageWithInfo(
         imageInfo,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         depthImages[i],
@@ -335,7 +348,7 @@ void LveSwapChain::createDepthResources() {
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
+    if (vkCreateImageView(_device.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create texture image view!");
     }
   }
@@ -355,11 +368,11 @@ void LveSwapChain::createSyncObjects() {
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    if (vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
+    if (vkCreateSemaphore(_device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
             VK_SUCCESS ||
-        vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
+        vkCreateSemaphore(_device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
             VK_SUCCESS ||
-        vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+        vkCreateFence(_device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create synchronization objects for a frame!");
     }
   }
@@ -368,8 +381,9 @@ void LveSwapChain::createSyncObjects() {
 VkSurfaceFormatKHR LveSwapChain::chooseSwapSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR> &availableFormats) {
   for (const auto &availableFormat : availableFormats) {
-    if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
-        availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      //if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
+      if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+          availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return availableFormat;
     }
   }
@@ -414,7 +428,7 @@ VkExtent2D LveSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabi
 }
 
 VkFormat LveSwapChain::findDepthFormat() {
-  return device.findSupportedFormat(
+  return _device.findSupportedFormat(
       {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
       VK_IMAGE_TILING_OPTIMAL,
       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);

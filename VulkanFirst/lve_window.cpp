@@ -24,13 +24,27 @@ namespace lve {
 		}
 	}
 
+	void LveWindow::framebufferResizeCallback(GLFWwindow* window, int width, int height)
+	{
+		auto lveWindow = reinterpret_cast<LveWindow*>(glfwGetWindowUserPointer(window));
+		lveWindow->_frameBufferresized = true;
+		lveWindow->_width = width;
+		lveWindow->_height = height;
+	}
+
+
 	void LveWindow::initLveWindow()
 	{
 		glfwInit();
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		//_window->reset(glfwCreateWindow(_width, _height, _windowname.c_str(), nullptr, nullptr));
+		//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 		_window = glfwCreateWindow(_width, _height, _windowname.c_str(), nullptr, nullptr);
+		//_window->reset(glfwCreateWindow(_width, _height, _windowname.c_str(), nullptr, nullptr));
+		glfwSetWindowUserPointer(_window, this);
+		glfwSetFramebufferSizeCallback(_window, LveWindow::framebufferResizeCallback);
+
 
 	}
 

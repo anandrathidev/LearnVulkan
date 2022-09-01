@@ -17,9 +17,15 @@ namespace lve {
 		VkExtent2D getExtent() { return { static_cast<uint32_t>(_width), static_cast<uint32_t>(_height) }; }
 		void createWindowSurface(VkInstance& instance, VkSurfaceKHR* surface_);
 		~LveWindow();
+
+		bool wasWindowResized() { return _frameBufferresized; };
+		void resetWindowResizedFlag() { _frameBufferresized=false; };
+
 	private:
+		static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 		int _width;
 		int _height;
+		bool _frameBufferresized;
 		std::string _windowname;
 
 		void initLveWindow();

@@ -16,6 +16,9 @@ class LveSwapChain {
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
   LveSwapChain(LveEngineDevice& deviceRef, VkExtent2D windowExtent);
+  LveSwapChain(
+      LveEngineDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<LveSwapChain> previous);
+
   ~LveSwapChain();
 
   LveSwapChain(const LveSwapChain &) = delete;
@@ -39,6 +42,7 @@ class LveSwapChain {
   VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t *imageIndex);
 
  private:
+  void init();
   void createSwapChain();
   void createImageViews();
   void createDepthResources();
@@ -65,10 +69,11 @@ class LveSwapChain {
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
 
-  LveEngineDevice& device;
+  LveEngineDevice& _device;
   VkExtent2D windowExtent;
 
   VkSwapchainKHR swapChain;
+  std::shared_ptr<LveSwapChain> _oldSwapChain;
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
