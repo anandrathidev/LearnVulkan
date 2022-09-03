@@ -14,7 +14,8 @@ struct SwapChainSupportDetails {
   std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct QueueFamilyIndices {
+struct QueueFamilyIndices 
+{
   uint32_t graphicsFamily;
   uint32_t presentFamily;
   bool graphicsFamilyHasValue = false;
@@ -90,7 +91,7 @@ class LveEngineDevice {
   bool checkDeviceExtensionSupport(VkPhysicalDevice device);
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
-  VkInstance instance;
+  VkInstance _instance;
   VkDebugUtilsMessengerEXT debugMessenger;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   LveWindow& window_;
@@ -101,7 +102,7 @@ class LveEngineDevice {
   VkQueue graphicsQueue_;
   VkQueue presentQueue_;
 
-  const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+  const std::vector<const char *> _validationLayers = {"VK_LAYER_KHRONOS_validation"};
   const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 };
 

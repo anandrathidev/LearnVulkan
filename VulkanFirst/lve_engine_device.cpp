@@ -62,11 +62,11 @@ LveEngineDevice::~LveEngineDevice() {
   vkDestroyDevice(device_, nullptr);
 
   if (enableValidationLayers) {
-    DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+    DestroyDebugUtilsMessengerEXT(_instance, debugMessenger, nullptr);
   }
 
-  vkDestroySurfaceKHR(instance, surface_, nullptr);
-  vkDestroyInstance(instance, nullptr);
+  vkDestroySurfaceKHR(_instance, surface_, nullptr);
+  vkDestroyInstance(_instance, nullptr);
 }
 
 void LveEngineDevice::createInstance() {
@@ -92,8 +92,8 @@ void LveEngineDevice::createInstance() {
 
   VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
   if (enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+    createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
+    createInfo.ppEnabledLayerNames = _validationLayers.data();
 
     populateDebugMessengerCreateInfo(debugCreateInfo);
     createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
@@ -102,7 +102,7 @@ void LveEngineDevice::createInstance() {
     createInfo.pNext = nullptr;
   }
 
-  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+  if (vkCreateInstance(&createInfo, nullptr, &_instance) != VK_SUCCESS) {
     throw std::runtime_error("failed to create instance!");
   }
 
@@ -111,13 +111,13 @@ void LveEngineDevice::createInstance() {
 
 void LveEngineDevice::pickPhysicalDevice() {
   uint32_t deviceCount = 0;
-  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+  vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
   if (deviceCount == 0) {
     throw std::runtime_error("failed to find GPUs with Vulkan support!");
   }
   std::cout << "Device count: " << deviceCount << std::endl;
-  std::vector<VkPhysicalDevice> devices(deviceCount);
-  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+  std::vector<VkPhysicalDevice> devices{ deviceCount };
+  vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 
   for (const auto &device : devices) {
     if (isDeviceSuitable(device)) {
@@ -126,12 +126,13 @@ void LveEngineDevice::pickPhysicalDevice() {
     }
   }
 
-  if (physicalDevice == VK_NULL_HANDLE) {
-    throw std::runtime_error("failed to find a suitable GPU!");
+  if (physicalDevice == VK_NULL_HANDLE) 
+  {
+    throw std::runtime_error("Failed to find a suitable GPU !");
   }
 
   vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-  std::cout << "physical device: " << properties.deviceName << std::endl;
+  std::cout << "Physical device: " << properties.deviceName << std::endl;
 }
 
 void LveEngineDevice::createLogicalDevice() 
@@ -167,8 +168,8 @@ void LveEngineDevice::createLogicalDevice()
   // might not really be necessary anymore because device specific validation layers
   // have been deprecated
   if (enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+    createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
+    createInfo.ppEnabledLayerNames = _validationLayers.data();
   } else {
     createInfo.enabledLayerCount = 0;
   }
@@ -196,7 +197,7 @@ void LveEngineDevice::createCommandPool()
   }
 }
 
-void LveEngineDevice::createSurface() { window_.createWindowSurface(instance, &surface_); }
+void LveEngineDevice::createSurface() { window_.createWindowSurface(_instance, &surface_); }
 
 bool LveEngineDevice::isDeviceSuitable(VkPhysicalDevice device) 
 {
@@ -236,7 +237,7 @@ void LveEngineDevice::setupDebugMessenger()
   if (!enableValidationLayers) return;
   VkDebugUtilsMessengerCreateInfoEXT createInfo;
   populateDebugMessengerCreateInfo(createInfo);
-  if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+  if (CreateDebugUtilsMessengerEXT(_instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
     throw std::runtime_error("failed to set up debug messenger!");
   }
 }
@@ -249,7 +250,7 @@ bool LveEngineDevice::checkValidationLayerSupport()
   std::vector<VkLayerProperties> availableLayers(layerCount);
   vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-  for (const char *layerName : validationLayers) {
+  for (const char *layerName : _validationLayers) {
     bool layerFound = false;
 
     for (const auto &layerProperties : availableLayers) {
